@@ -4,49 +4,49 @@ const stocks = [
         id: 1,
         ticker: "SBER",
         name: "Сбербанк",
-        fairPrice: 320.00
+        fairPrice: 345.00
     },
     {
         id: 2,
         ticker: "GAZP",
         name: "Газпром",
-        fairPrice: 170.00
+        fairPrice: 180.00
     },
     {
         id: 3,
         ticker: "YDEX",
         name: "Яндекс",
-        fairPrice: 4200.00
+        fairPrice: 6800.00
     },
     {
         id: 4,
         ticker: "LKOH",
         name: "Лукойл",
-        fairPrice: 8000.00
+        fairPrice: 8500.00
     },
     {
         id: 5,
         ticker: "GMKN",
         name: "Норникель",
-        fairPrice: 26000.00
+        fairPrice: 150.00
     },
     {
         id: 6,
         ticker: "VTBR",
         name: "ВТБ",
-        fairPrice: 0.042
+        fairPrice: 130.00
     },
     {
         id: 7,
         ticker: "TATN",
         name: "Татнефть",
-        fairPrice: 800.00
+        fairPrice: 680.00
     },
     {
         id: 8,
         ticker: "ROSN",
         name: "Роснефть",
-        fairPrice: 700.00
+        fairPrice: 560.00
     }
 ];
 
@@ -86,30 +86,17 @@ try {
     const currentPriceValue = document.getElementById('current-price-value');
     const fairPriceEl = document.getElementById('fair-price');
     const growthPotentialEl = document.getElementById('growth-potential');
-    const dailyChangeEl = document.getElementById('daily-change');
-    const tradeVolumeEl = document.getElementById('trade-volume');
-    const marketCapEl = document.getElementById('market-cap');
     
     // Функция для получения реальной цены с Мосбиржи
-    async function fetchStockData(ticker) {
+    async function fetchStockPrice(ticker) {
         try {
-            const response = await fetch(`https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities/${ticker}.json?iss.meta=off&iss.only=securities,marketdata`);
+            const response = await fetch(`https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities/${ticker}.json?iss.meta=off&iss.only=marketdata`);
             const data = await response.json();
             
-            // Извлекаем данные
-            const securityData = data.securities.data[0];
-            const marketData = data.marketdata.data[0];
-            
-            if (securityData && marketData) {
-                return {
-                    currentPrice: marketData[12], // LAST - последняя цена сделки
-                    openPrice: marketData[1],     // OPEN
-                    lowPrice: marketData[3],      // LOW
-                    highPrice: marketData[2],     // HIGH
-                    tradeVolume: marketData[23],  // VOLTODAY - объем в рублях
-                    marketCap: securityData[3],   // ISSUECAPITALIZATION - капитализация
-                    change: marketData[5]         // CHANGE - изменение цены в %
-                };
+            // Извлекаем последнюю цену
+            const marketData = data.marketdata.data;
+            if (marketData && marketData.length > 0) {
+                return marketData[0][12]; // LAST - последняя цена сделки
             }
             
             return null;
@@ -145,7 +132,7 @@ try {
                 </div>
             `;
             
-            stockItem.addEventListener('click', async () => {
+            stockItem.addEventListener('click', () => {
                 showStockDetail(stock);
             });
             
@@ -153,13 +140,10 @@ try {
             
             // Асинхронно загружаем данные о цене
             try {
-                const stockData = await fetchStockData(stock.ticker);
-                if (stockData && stockData.currentPrice) {
-                    const priceElement = document.getElementById(`price-${stock.ticker}`);
-                    priceElement.innerHTML = `${stockData.currentPrice.toFixed(2)} RUB`;
-                    
-                    // Сохраняем данные для быстрого доступа
-                    stock.currentData = stockData;
+                const currentPrice = await fetchStockPrice(stock.ticker);
+                if (currentPrice) {
+                    document.getElementById(`price-${stock.ticker}`).innerHTML = `${currentPrice.toFixed(2)} RUB`;
+                    stock.currentPrice = currentPrice; // Сохраняем цену
                 } else {
                     document.getElementById(`price-${stock.ticker}`).textContent = "Ошибка";
                 }
@@ -171,18 +155,21 @@ try {
     }
     
     // Показать детали акции
-    async function showStockDetail(stock) {
+    function showStockDetail(stock) {
         console.log("Показываем детали для:", stock.name);
         
-        // Показываем индикатор загрузки
+        // Показываем индикатор загрузки если цена еще не загружена
         stockName.textContent = stock.name;
         stockTickerEl.textContent = stock.ticker;
-        currentPriceValue.innerHTML = '<span class="loader"></span>';
-        fairPriceEl.innerHTML = '<span class="loader"></span>';
+        
+        if (!stock.currentPrice) {
+            currentPriceValue.innerHTML = '<span class="loader"></span>';
+        } else {
+            currentPriceValue.textContent = `${stock.currentPrice.toFixed(2)} RUB`;
+        }
+        
+        fairPriceEl.textContent = stock.fairPrice.toFixed(2) + ' RUB';
         growthPotentialEl.innerHTML = '<span class="loader"></span>';
-        dailyChangeEl.innerHTML = '<span class="loader"></span>';
-        tradeVolumeEl.innerHTML = '<span class="loader"></span>';
-        marketCapEl.innerHTML = '<span class="loader"></span>';
         
         // Переключаем экраны
         mainScreen.classList.add('hidden');
@@ -190,65 +177,37 @@ try {
         backButton.classList.remove('hidden');
         appTitle.textContent = stock.name;
         
-        // Загружаем данные, если их нет
-        if (!stock.currentData) {
-            stock.currentData = await fetchStockData(stock.ticker);
-        }
-        
-        // Обновляем данные
-        if (stock.currentData) {
-            updateStockDetail(stock);
+        // Если цена уже загружена, сразу показываем потенциал роста
+        if (stock.currentPrice) {
+            updateGrowthPotential(stock);
         } else {
-            // Обработка ошибки
-            currentPriceValue.textContent = "Ошибка";
-            fairPriceEl.textContent = stock.fairPrice.toFixed(2) + ' RUB';
-            growthPotentialEl.textContent = "Н/Д";
+            // Если цена не загружена, загружаем ее
+            fetchStockPrice(stock.ticker)
+                .then(price => {
+                    if (price) {
+                        stock.currentPrice = price;
+                        currentPriceValue.textContent = `${price.toFixed(2)} RUB`;
+                        updateGrowthPotential(stock);
+                    } else {
+                        currentPriceValue.textContent = "Ошибка";
+                        growthPotentialEl.textContent = "Ошибка";
+                    }
+                })
+                .catch(() => {
+                    currentPriceValue.textContent = "Ошибка";
+                    growthPotentialEl.textContent = "Ошибка";
+                });
         }
     }
     
-    // Обновление детальной информации об акции
-    function updateStockDetail(stock) {
-        const data = stock.currentData;
+    // Обновление потенциала роста
+    function updateGrowthPotential(stock) {
+        if (!stock.currentPrice) return;
         
-        // Текущая цена
-        currentPriceValue.textContent = data.currentPrice.toFixed(2) + ' RUB';
-        
-        // Справедливая цена
-        fairPriceEl.textContent = stock.fairPrice.toFixed(2) + ' RUB';
-        
-        // Потенциал роста
-        const growth = ((stock.fairPrice - data.currentPrice) / data.currentPrice * 100).toFixed(2);
+        const growth = ((stock.fairPrice - stock.currentPrice) / stock.currentPrice * 100).toFixed(2);
         const growthText = (growth > 0 ? '+' : '') + growth + '%';
         growthPotentialEl.textContent = growthText;
         growthPotentialEl.className = growth >= 0 ? 'positive' : 'negative';
-        
-        // Дополнительная информация
-        dailyChangeEl.textContent = data.change > 0 ? '+' + data.change.toFixed(2) + '%' : data.change.toFixed(2) + '%';
-        dailyChangeEl.className = data.change >= 0 ? 'positive' : 'negative';
-        
-        // Форматирование объема торгов
-        const volume = data.tradeVolume;
-        let volumeText;
-        if (volume >= 1000000000) {
-            volumeText = (volume / 1000000000).toFixed(1) + ' млрд RUB';
-        } else if (volume >= 1000000) {
-            volumeText = (volume / 1000000).toFixed(1) + ' млн RUB';
-        } else {
-            volumeText = volume.toFixed(0) + ' RUB';
-        }
-        tradeVolumeEl.textContent = volumeText;
-        
-        // Форматирование капитализации
-        const marketCap = data.marketCap;
-        let capText;
-        if (marketCap >= 1000000000) {
-            capText = (marketCap / 1000000000).toFixed(1) + ' млрд RUB';
-        } else if (marketCap >= 1000000) {
-            capText = (marketCap / 1000000).toFixed(1) + ' млн RUB';
-        } else {
-            capText = marketCap.toFixed(0) + ' RUB';
-        }
-        marketCapEl.textContent = capText;
     }
     
     // Обработчик для строки поиска

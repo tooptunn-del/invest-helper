@@ -1,3 +1,8 @@
+// Отладка кликов по акциям
+document.getElementById('stocks-list').addEventListener('click', function(e) {
+    console.log("Click detected in stocks list", e.target);
+});
+
 // Данные акций
 const stocks = [
     {

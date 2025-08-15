@@ -6,7 +6,8 @@
     <title>Помощник инвестора</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- TradingView Widget -->
+    <script src="https://s3.tradingview.com/tv.js"></script>
 </head>
 <body>
     <!-- Экран загрузки -->
@@ -43,9 +44,20 @@
                 <span id="current-price-value"></span>
                 <span id="price-change"></span>
             </div>
-            <div class="chart-container">
-                <canvas id="simple-chart"></canvas>
+            
+            <!-- Контролы временного диапазона -->
+            <div class="time-frames">
+                <button class="time-frame active" data-time="1D">1Д</button>
+                <button class="time-frame" data-time="1W">1Н</button>
+                <button class="time-frame" data-time="1M">1М</button>
+                <button class="time-frame" data-time="3M">3М</button>
+                <button class="time-frame" data-time="1Y">1Г</button>
+                <button class="time-frame" data-time="ALL">Все</button>
             </div>
+            
+            <!-- Контейнер для графика TradingView -->
+            <div id="tradingview-chart"></div>
+            
             <div class="info-box">
                 <div class="info-row">
                     <span>Справедливая цена:</span>

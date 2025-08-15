@@ -1,0 +1,331 @@
+/* Основные стили */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Roboto', Arial, sans-serif;
+    background-color: #f5f7fa;
+    color: #333;
+    height: 100vh;
+    overflow: hidden;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Экран загрузки */
+#splash-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    color: white;
+    text-align: center;
+    animation: fadeOut 1s forwards 2s;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; visibility: hidden; }
+}
+
+.splash-content {
+    animation: zoomIn 1.5s;
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.logo {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Шапка приложения */
+#app-header {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background-color: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+body.dark-mode #app-header {
+    background-color: #1e1e1e;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+#back-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    margin-right: 10px;
+    cursor: pointer;
+    color: #2575fc;
+}
+
+#app-title {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+/* Поисковая строка */
+.search-container {
+    padding: 15px;
+}
+
+#search-input {
+    width: 100%;
+    padding: 12px 15px;
+    border: none;
+    border-radius: 25px;
+    background: #fff;
+    font-size: 16px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-sizing: border-box;
+}
+
+body.dark-mode #search-input {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Список акций */
+#stocks-list {
+    padding: 0 15px;
+    height: calc(100vh - 180px);
+    overflow-y: auto;
+}
+
+.stock-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: white;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+body.dark-mode .stock-item {
+    background: #1e1e1e;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.stock-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+body.dark-mode .stock-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.stock-info {
+    flex-grow: 1;
+}
+
+.stock-name {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.stock-ticker {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+body.dark-mode .stock-ticker {
+    color: #aaa;
+}
+
+.stock-price {
+    font-weight: bold;
+    font-size: 1.1rem;
+    transition: all 0.5s;
+}
+
+/* Экран деталей акции */
+#detail-screen {
+    padding: 15px;
+    height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+.stock-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+#refresh-data {
+    background: #2575fc;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 15px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+#refresh-data:hover {
+    background: #1a5bc5;
+}
+
+.current-price {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#current-price-value {
+    font-size: 2rem;
+    font-weight: bold;
+    display: block;
+}
+
+#price-change {
+    font-size: 1.2rem;
+}
+
+.chart-container {
+    height: 300px;
+    margin: 20px 0;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+body.dark-mode .chart-container {
+    background: #1e1e1e;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.info-box {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+body.dark-mode .info-box {
+    background: #1e1e1e;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+body.dark-mode .info-row {
+    border-bottom: 1px solid #333;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.positive {
+    color: #2ecc71;
+}
+
+.negative {
+    color: #e74c3c;
+}
+
+/* Вкладки */
+.tabs {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+body.dark-mode .tabs {
+    background: #1e1e1e;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+}
+
+.tab-button {
+    flex: 1;
+    padding: 15px;
+    border: none;
+    background: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #666;
+}
+
+body.dark-mode .tab-button {
+    color: #aaa;
+}
+
+.tab-button.active {
+    color: #2575fc;
+    font-weight: bold;
+    border-top: 3px solid #2575fc;
+}
+
+/* Анимация обновления цены */
+.price-update-animation {
+    animation: pulseUpdate 1s;
+}
+
+@keyframes pulseUpdate {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); color: #4CAF50; }
+    100% { transform: scale(1); }
+}
+
+/* Сообщения об ошибках */
+.no-data {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #888;
+    font-style: italic;
+}
+
+.chart-error {
+    background-color: #ffebee;
+    border: 1px solid #e57373;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    margin: 10px 0;
+}
+
+body.dark-mode .chart-error {
+    background-color: #3a2528;
+    border: 1px solid #7b4747;
+}

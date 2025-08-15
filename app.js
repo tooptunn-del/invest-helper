@@ -1,4 +1,4 @@
-// Данные акций (в реальном приложении вы будете обновлять этот список)
+// Данные акций
 const stocks = [
     {
         id: 1,
@@ -18,7 +18,7 @@ const stocks = [
     },
     {
         id: 3,
-        ticker: "YDEX",
+        ticker: "YNDX",
         name: "Яндекс",
         currentPrice: 4000.00,
         fairPrice: 4200.00,
@@ -58,8 +58,8 @@ const stockName = document.getElementById('stock-name');
 const stockTicker = document.getElementById('stock-ticker');
 const currentPriceValue = document.getElementById('current-price-value');
 const priceChange = document.getElementById('price-change');
-const fairPrice = document.getElementById('fair-price');
-const growthPotential = document.getElementById('growth-potential');
+const fairPriceEl = document.getElementById('fair-price');
+const growthPotentialEl = document.getElementById('growth-potential');
 const tabButtons = document.querySelectorAll('.tab-button');
 const refreshDataButton = document.getElementById('refresh-data');
 
@@ -80,18 +80,18 @@ function applyTheme() {
 setTimeout(() => {
     splashScreen.classList.add('hidden');
     appContent.classList.remove('hidden');
-    tg.expand(); // Раскрываем приложение на весь экран
-    applyTheme(); // Применяем тему
+    tg.expand();
+    applyTheme();
     renderStocks();
+    updateStockPrices(); // Первоначальное обновление цен
 }, 2000);
 
-// Обработчик для строки поиска
+// Обработчики событий
 searchInput.addEventListener('input', function() {
     const searchTerm = this.value.toLowerCase();
     renderStocks(searchTerm);
 });
 
-// Обработчик для кнопки "Назад"
 backButton.addEventListener('click', function() {
     detailScreen.classList.add('hidden');
     mainScreen.classList.remove('hidden');
@@ -99,30 +99,30 @@ backButton.addEventListener('click', function() {
     appTitle.textContent = "Акции";
 });
 
-// Обработчики для вкладок
 tabButtons.forEach(button => {
     button.addEventListener('click', function() {
-        // Убираем активность со всех кнопок
         tabButtons.forEach(btn => btn.classList.remove('active'));
-        // Делаем активной текущую кнопку
         this.classList.add('active');
-        
         const tab = this.dataset.tab;
         if (tab === 'articles') {
-            alert("Раздел статей в разработке! Добавьте свои статьи позже.");
+            tg.showAlert("Раздел статей в разработке! Добавьте свои статьи позже.");
         }
     });
 });
 
-// Обработчик для кнопки обновления данных
 refreshDataButton.addEventListener('click', async function() {
     const currentTicker = stockTicker.textContent;
-    delete dataCache[currentTicker]; // Сбрасываем кэш
+    delete dataCache[currentTicker];
     
     tg.showProgress();
     try {
         const newData = await fetchRealTimeData(currentTicker);
         initTradingViewChart(newData);
+        
+        // Обновляем цену в заголовке
+        const newPrice = currentPrices[currentTicker] || stocks.find(s => s.ticker === currentTicker).currentPrice;
+        currentPriceValue.textContent = newPrice.toFixed(2) + ' RUB';
+        
     } catch (error) {
         console.error("Ошибка обновления:", error);
         tg.showAlert("Не удалось обновить данные");
@@ -135,20 +135,16 @@ refreshDataButton.addEventListener('click', async function() {
 function renderStocks(filter = '') {
     stocksList.innerHTML = '';
     
-    let filteredStocks = stocks;
-    if (filter) {
-        filteredStocks = stocks.filter(stock => 
-            stock.name.toLowerCase().includes(filter) || 
-            stock.ticker.toLowerCase().includes(filter)
-        );
-    }
+    const filteredStocks = filter ? stocks.filter(stock => 
+        stock.name.toLowerCase().includes(filter) || 
+        stock.ticker.toLowerCase().includes(filter)
+    ) : stocks;
     
     filteredStocks.forEach(stock => {
         const stockItem = document.createElement('div');
         stockItem.className = 'stock-item';
         stockItem.setAttribute('data-ticker', stock.ticker);
         
-        // Используем реальную цену из кэша, если есть
         const displayPrice = currentPrices[stock.ticker] || stock.currentPrice;
         
         stockItem.innerHTML = `
@@ -178,6 +174,7 @@ function renderStocks(filter = '') {
 // Функция для показа деталей акции
 async function showStockDetail(stock) {
     console.log("Отображаем акцию:", stock);
+    
     mainScreen.classList.add('hidden');
     detailScreen.classList.remove('hidden');
     backButton.classList.remove('hidden');
@@ -187,11 +184,10 @@ async function showStockDetail(stock) {
     stockName.textContent = stock.name;
     stockTicker.textContent = stock.ticker;
     
-    // Используем реальную цену из кэша, если есть
     const displayPrice = currentPrices[stock.ticker] || stock.currentPrice;
     currentPriceValue.textContent = displayPrice.toFixed(2) + ' RUB';
     
-    // Рассчитываем изменение цены за последний период
+    // Рассчитываем изменение цены
     const priceChangeValue = displayPrice - stock.history[0];
     const priceChangePercent = ((priceChangeValue / stock.history[0]) * 100).toFixed(2);
     
@@ -199,20 +195,16 @@ async function showStockDetail(stock) {
     priceChange.className = priceChangeValue >= 0 ? 'positive' : 'negative';
     
     // Справедливая цена и потенциал роста
-    fairPrice.textContent = stock.fairPrice.toFixed(2) + ' RUB';
+    fairPriceEl.textContent = stock.fairPrice.toFixed(2) + ' RUB';
     
     const growth = ((stock.fairPrice - displayPrice) / displayPrice * 100).toFixed(2);
-    growthPotential.textContent = (growth > 0 ? '+' : '') + growth + '%';
-    growthPotential.className = growth >= 0 ? 'positive' : 'negative';
+    growthPotentialEl.textContent = (growth > 0 ? '+' : '') + growth + '%';
+    growthPotentialEl.className = growth >= 0 ? 'positive' : 'negative';
     
     // Загружаем данные для графика
     try {
         const realData = await fetchRealTimeData(stock.ticker);
-        if (realData.length > 0) {
-            initTradingViewChart(realData);
-        } else {
-            throw new Error("Нет данных для графика");
-        }
+        initTradingViewChart(realData.length > 0 ? realData : convertToCandles(stock.history));
     } catch (error) {
         console.error("Ошибка загрузки данных:", error);
         initTradingViewChart(convertToCandles(stock.history));
@@ -224,62 +216,61 @@ async function showStockDetail(stock) {
 function initTradingViewChart(data) {
     const chartContainer = document.getElementById('tradingview-chart');
     
-    // Очищаем предыдущий график
-    while (chartContainer.firstChild) {
-        chartContainer.removeChild(chartContainer.firstChild);
-    }
+    // Очищаем контейнер
+    chartContainer.innerHTML = '';
     
-    // Проверяем наличие данных
+    // Проверяем данные
     if (!data || data.length === 0) {
         chartContainer.innerHTML = '<div class="no-data">Нет данных для графика</div>';
         return;
     }
     
-    // Создаем график
-    const chart = LightweightCharts.createChart(chartContainer, {
-        width: chartContainer.clientWidth,
-        height: 300,
-        layout: {
-            backgroundColor: tg.colorScheme === 'dark' ? '#1e1e1e' : '#ffffff',
-            textColor: tg.colorScheme === 'dark' ? '#e0e0e0' : '#333',
-        },
-        grid: {
-            vertLines: { color: tg.colorScheme === 'dark' ? '#333' : '#eee' },
-            horzLines: { color: tg.colorScheme === 'dark' ? '#333' : '#eee' },
-        },
-        timeScale: {
-            timeVisible: true,
-            secondsVisible: false,
-        },
-    });
-    
-    const series = chart.addCandlestickSeries({
-        upColor: '#26a69a',
-        downColor: '#ef5350',
-        borderVisible: false,
-        wickUpColor: '#26a69a',
-        wickDownColor: '#ef5350',
-    });
-    
-    series.setData(data);
-    
-    // Адаптация под изменение темы
-    tg.onEvent('themeChanged', () => {
-        applyTheme();
-        chart.applyOptions({
+    try {
+        // Создаем график
+        const chart = LightweightCharts.createChart(chartContainer, {
+            width: chartContainer.clientWidth,
+            height: 300,
             layout: {
                 backgroundColor: tg.colorScheme === 'dark' ? '#1e1e1e' : '#ffffff',
                 textColor: tg.colorScheme === 'dark' ? '#e0e0e0' : '#333',
             },
             grid: {
-                vertLines: { color: tg.colorScheme === 'dark' ? '#333' : '#eee' },
+                vertLines: { visible: false },
                 horzLines: { color: tg.colorScheme === 'dark' ? '#333' : '#eee' },
-            }
+            },
+            timeScale: {
+                timeVisible: true,
+                secondsVisible: false,
+            },
         });
-    });
+        
+        // Добавляем свечной ряд
+        const series = chart.addCandlestickSeries({
+            upColor: '#26a69a',
+            downColor: '#ef5350',
+            borderVisible: false,
+            wickUpColor: '#26a69a',
+            wickDownColor: '#ef5350',
+        });
+        
+        // Устанавливаем данные
+        series.setData(data);
+        
+        // Адаптация под изменение темы
+        tg.onEvent('themeChanged', applyTheme);
+        
+    } catch (error) {
+        console.error("Ошибка создания графика:", error);
+        chartContainer.innerHTML = `
+            <div class="chart-error">
+                Ошибка загрузки графика: ${error.message}
+                <button onclick="location.reload()">Обновить</button>
+            </div>
+        `;
+    }
 }
 
-// Функция для получения реальных данных с MOEX
+// Альтернативный источник данных (Yahoo Finance через RapidAPI)
 async function fetchRealTimeData(ticker) {
     // Проверка кэша
     if (dataCache[ticker] && (Date.now() - dataCache[ticker].timestamp < 300000)) {
@@ -287,31 +278,50 @@ async function fetchRealTimeData(ticker) {
     }
 
     try {
-        // Альтернативный CORS-прокси
-        const proxyUrl = "https://api.allorigins.win/raw?url=";
-        const apiUrl = `https://iss.moex.com/iss/engines/stock/markets/shares/securities/${ticker}/candles.json?interval=60&limit=50`;
+        // Вариант 1: MOEX API (основной)
+        const moexResponse = await fetch(`https://iss.moex.com/iss/engines/stock/markets/shares/securities/${ticker}.json?iss.meta=off&iss.only=securities&securities.columns=PREVPRICE`);
+        const moexData = await moexResponse.json();
         
-        const response = await fetch(proxyUrl + encodeURIComponent(apiUrl));
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (moexData.securities.data.length > 0) {
+            const price = moexData.securities.data[0][0];
+            currentPrices[ticker] = price;
+            
+            // Формируем демо-график на основе цены
+            const candles = [];
+            const now = Date.now() / 1000;
+            
+            for (let i = 10; i > 0; i--) {
+                const variation = (Math.random() - 0.5) * price * 0.05;
+                candles.push({
+                    time: now - i * 3600,
+                    open: price + variation * 0.8,
+                    high: price + variation * 1.2,
+                    low: price + variation * 0.5,
+                    close: price + variation
+                });
+            }
+            
+            // Сохраняем в кэш
+            dataCache[ticker] = {
+                data: candles,
+                timestamp: Date.now()
+            };
+            
+            return candles;
         }
-        
-        const data = await response.json();
-        
-        // Проверка наличия данных
-        if (!data.candles || !data.candles.data || data.candles.data.length === 0) {
-            throw new Error("Нет данных от биржи");
-        }
-        
-        const candles = data.candles.data.map(candle => ({
-            time: new Date(candle[6]).getTime() / 1000,
-            open: candle[0],
-            high: candle[1],
-            low: candle[2],
-            close: candle[3]
-        }));
 
+        // Вариант 2: Альтернативный источник (если MOEX не ответил)
+        const alternativeResponse = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}.ME?interval=1d&range=5d`);
+        const altData = await alternativeResponse.json();
+        
+        const candles = altData.chart.result[0].indicators.quote[0].open.map((open, i) => ({
+            time: altData.chart.result[0].timestamp[i],
+            open: open,
+            high: altData.chart.result[0].indicators.quote[0].high[i],
+            low: altData.chart.result[0].indicators.quote[0].low[i],
+            close: altData.chart.result[0].indicators.quote[0].close[i]
+        }));
+        
         // Сохраняем в кэш
         dataCache[ticker] = {
             data: candles,
@@ -319,9 +329,10 @@ async function fetchRealTimeData(ticker) {
         };
         
         return candles;
+        
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
-        tg.showAlert("Ошибка загрузки графика. Используем демо-данные");
+        tg.showAlert("Ошибка загрузки данных. Используем демо-график");
         return [];
     }
 }
@@ -341,17 +352,14 @@ function convertToCandles(prices) {
 async function updateStockPrices() {
     for (const stock of stocks) {
         try {
-            const proxyUrl = "https://corsproxy.io/?";
-            const apiUrl = `https://iss.moex.com/iss/engines/stock/markets/shares/securities/${stock.ticker}/candles.json?interval=1&limit=1`;
-            
-            const response = await fetch(proxyUrl + encodeURIComponent(apiUrl));
+            // Прямой запрос к MOEX API (без CORS-прокси)
+            const response = await fetch(`https://iss.moex.com/iss/engines/stock/markets/shares/securities/${stock.ticker}.json?iss.meta=off&iss.only=securities&securities.columns=PREVPRICE`);
             const data = await response.json();
             
-            if (data.candles.data.length > 0) {
-                const lastPrice = data.candles.data[0][3]; // последняя цена закрытия
+            if (data.securities.data.length > 0) {
+                const lastPrice = data.securities.data[0][0];
                 currentPrices[stock.ticker] = lastPrice;
                 
-                // Обновляем DOM
                 const priceElement = document.querySelector(`.stock-item[data-ticker="${stock.ticker}"] .stock-price`);
                 if (priceElement) {
                     priceElement.textContent = `${lastPrice.toFixed(2)} RUB`;
@@ -361,15 +369,11 @@ async function updateStockPrices() {
             }
         } catch (error) {
             console.error(`Ошибка обновления ${stock.ticker}:`, error);
+            // Используем статичную цену как запасной вариант
+            currentPrices[stock.ticker] = stock.currentPrice;
         }
     }
 }
-
-// Запускаем обновление каждые 30 сек
-setInterval(updateStockPrices, 30000);
-
-// Первоначальное обновление цен
-updateStockPrices();
 
 // Глобальный обработчик ошибок
 window.addEventListener('error', function(event) {

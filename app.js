@@ -18,7 +18,7 @@ const stocks = [
     },
     {
         id: 3,
-        ticker: "YNDX",
+        ticker: "YDEX",
         name: "Яндекс",
         currentPrice: 4000.00,
         fairPrice: 4200.00,
@@ -177,6 +177,7 @@ function renderStocks(filter = '') {
 
 // Функция для показа деталей акции
 async function showStockDetail(stock) {
+    console.log("Отображаем акцию:", stock);
     mainScreen.classList.add('hidden');
     detailScreen.classList.remove('hidden');
     backButton.classList.remove('hidden');
@@ -284,27 +285,33 @@ async function fetchRealTimeData(ticker) {
     if (dataCache[ticker] && (Date.now() - dataCache[ticker].timestamp < 300000)) {
         return dataCache[ticker].data;
     }
-    
+
     try {
-        // Используем CORS-прокси
-        const proxyUrl = "https://corsproxy.io/?";
+        // Альтернативный CORS-прокси
+        const proxyUrl = "https://api.allorigins.win/raw?url=";
         const apiUrl = `https://iss.moex.com/iss/engines/stock/markets/shares/securities/${ticker}/candles.json?interval=60&limit=50`;
         
         const response = await fetch(proxyUrl + encodeURIComponent(apiUrl));
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
-        if (!data.candles || !data.candles.data) {
-            throw new Error("Неверный формат данных");
+        // Проверка наличия данных
+        if (!data.candles || !data.candles.data || data.candles.data.length === 0) {
+            throw new Error("Нет данных от биржи");
         }
         
         const candles = data.candles.data.map(candle => ({
-            time: new Date(candle[6]).getTime() / 1000, // Конвертация в UNIX-формат
+            time: new Date(candle[6]).getTime() / 1000,
             open: candle[0],
             high: candle[1],
             low: candle[2],
             close: candle[3]
         }));
-        
+
         // Сохраняем в кэш
         dataCache[ticker] = {
             data: candles,
@@ -314,6 +321,7 @@ async function fetchRealTimeData(ticker) {
         return candles;
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
+        tg.showAlert("Ошибка загрузки графика. Используем демо-данные");
         return [];
     }
 }

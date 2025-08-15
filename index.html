@@ -6,8 +6,6 @@
     <title>Помощник инвестора</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- TradingView Widget -->
-    <script src="https://s3.tradingview.com/tv.js"></script>
 </head>
 <body>
     <!-- Экран загрузки -->
@@ -40,32 +38,34 @@
                 <h2 id="stock-name"></h2>
                 <div class="stock-ticker" id="stock-ticker"></div>
             </div>
-            <div class="current-price">
-                <span id="current-price-value"></span>
-                <span id="price-change"></span>
-            </div>
             
-            <!-- Контролы временного диапазона -->
-            <div class="time-frames">
-                <button class="time-frame active" data-time="1D">1Д</button>
-                <button class="time-frame" data-time="1W">1Н</button>
-                <button class="time-frame" data-time="1M">1М</button>
-                <button class="time-frame" data-time="3M">3М</button>
-                <button class="time-frame" data-time="1Y">1Г</button>
-                <button class="time-frame" data-time="ALL">Все</button>
+            <div class="price-container">
+                <div class="price-box">
+                    <div class="price-label">Текущая цена</div>
+                    <div class="price-value" id="current-price-value"></div>
+                </div>
+                <div class="price-box">
+                    <div class="price-label">Справедливая цена</div>
+                    <div class="price-value" id="fair-price"></div>
+                </div>
+                <div class="price-box">
+                    <div class="price-label">Потенциал</div>
+                    <div class="price-value" id="growth-potential"></div>
+                </div>
             </div>
-            
-            <!-- Контейнер для графика TradingView -->
-            <div id="tradingview-chart"></div>
             
             <div class="info-box">
                 <div class="info-row">
-                    <span>Справедливая цена:</span>
-                    <span id="fair-price"></span>
+                    <span>Изменение за день:</span>
+                    <span id="daily-change"></span>
                 </div>
                 <div class="info-row">
-                    <span>Потенциал роста:</span>
-                    <span id="growth-potential"></span>
+                    <span>Объем торгов:</span>
+                    <span id="trade-volume"></span>
+                </div>
+                <div class="info-row">
+                    <span>Рыночная капитализация:</span>
+                    <span id="market-cap"></span>
                 </div>
             </div>
         </div>

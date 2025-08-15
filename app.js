@@ -1,4 +1,4 @@
-// Данные акций (теперь с реальными тикерами)
+// Данные акций (с вашими справедливыми ценами)
 const stocks = [
     {
         id: 1,
@@ -50,10 +50,6 @@ const stocks = [
     }
 ];
 
-// Глобальные переменные
-let currentStock = null;
-let currentTimeFrame = '1D';
-
 // Глобальная обработка ошибок
 window.addEventListener('error', function(event) {
     console.error("Global error:", event.error);
@@ -88,46 +84,37 @@ try {
     const stockName = document.getElementById('stock-name');
     const stockTickerEl = document.getElementById('stock-ticker');
     const currentPriceValue = document.getElementById('current-price-value');
-    const priceChange = document.getElementById('price-change');
     const fairPriceEl = document.getElementById('fair-price');
     const growthPotentialEl = document.getElementById('growth-potential');
+    const dailyChangeEl = document.getElementById('daily-change');
+    const tradeVolumeEl = document.getElementById('trade-volume');
+    const marketCapEl = document.getElementById('market-cap');
     
     // Функция для получения реальной цены с Мосбиржи
-    async function fetchStockPrice(ticker) {
+    async function fetchStockData(ticker) {
         try {
             const response = await fetch(`https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities/${ticker}.json?iss.meta=off&iss.only=securities,marketdata`);
             const data = await response.json();
             
-            // Извлекаем последнюю цену
-            const marketData = data.marketdata.data;
-            if (marketData && marketData.length > 0) {
-                // LAST - последняя цена сделки
-                return marketData[0][12] || null;
+            // Извлекаем данные
+            const securityData = data.securities.data[0];
+            const marketData = data.marketdata.data[0];
+            
+            if (securityData && marketData) {
+                return {
+                    currentPrice: marketData[12], // LAST - последняя цена сделки
+                    openPrice: marketData[1],     // OPEN
+                    lowPrice: marketData[3],      // LOW
+                    highPrice: marketData[2],     // HIGH
+                    tradeVolume: marketData[23],  // VOLTODAY - объем в рублях
+                    marketCap: securityData[3],   // ISSUECAPITALIZATION - капитализация
+                    change: marketData[5]         // CHANGE - изменение цены в %
+                };
             }
             
             return null;
         } catch (error) {
             console.error('Ошибка при получении данных:', error);
-            return null;
-        }
-    }
-    
-    // Функция для получения исторических данных (для вычисления изменения цены)
-    async function fetchInitialPrice(ticker) {
-        try {
-            // Используем API Московской биржи для получения данных за прошлый месяц
-            const response = await fetch(`https://iss.moex.com/iss/history/engines/stock/markets/shares/boards/TQBR/securities/${ticker}.json?from=2023-07-01&till=2023-07-31&iss.meta=off`);
-            const data = await response.json();
-            
-            const history = data.history.data;
-            if (history && history.length > 0) {
-                // Берем цену закрытия первой доступной записи
-                return history[0][11] || null;
-            }
-            
-            return null;
-        } catch (error) {
-            console.error('Ошибка при получении исторических данных:', error);
             return null;
         }
     }
@@ -145,10 +132,7 @@ try {
             stocks;
         
         for (const stock of filteredStocks) {
-            // Получаем текущую цену
-            const currentPrice = await fetchStockPrice(stock.ticker);
-            if (currentPrice) stock.currentPrice = currentPrice;
-            
+            // Создаем элемент акции
             const stockItem = document.createElement('div');
             stockItem.className = 'stock-item';
             stockItem.innerHTML = `
@@ -156,126 +140,115 @@ try {
                     <div class="stock-name">${stock.name}</div>
                     <div class="stock-ticker">${stock.ticker}</div>
                 </div>
-                <div class="stock-price">${stock.currentPrice ? stock.currentPrice.toFixed(2) + ' RUB' : 'Загрузка...'}</div>
+                <div class="stock-price" id="price-${stock.ticker}">
+                    <span class="loader"></span>
+                </div>
             `;
             
             stockItem.addEventListener('click', async () => {
-                // Получаем начальную цену для расчета изменения
-                if (!stock.initialPrice) {
-                    stock.initialPrice = await fetchInitialPrice(stock.ticker);
-                }
                 showStockDetail(stock);
             });
             
             stocksList.appendChild(stockItem);
+            
+            // Асинхронно загружаем данные о цене
+            try {
+                const stockData = await fetchStockData(stock.ticker);
+                if (stockData && stockData.currentPrice) {
+                    const priceElement = document.getElementById(`price-${stock.ticker}`);
+                    priceElement.innerHTML = `${stockData.currentPrice.toFixed(2)} RUB`;
+                    
+                    // Сохраняем данные для быстрого доступа
+                    stock.currentData = stockData;
+                } else {
+                    document.getElementById(`price-${stock.ticker}`).textContent = "Ошибка";
+                }
+            } catch (e) {
+                document.getElementById(`price-${stock.ticker}`).textContent = "Ошибка";
+                console.error(`Ошибка загрузки данных для ${stock.ticker}:`, e);
+            }
         }
     }
     
     // Показать детали акции
-    function showStockDetail(stock) {
+    async function showStockDetail(stock) {
         console.log("Показываем детали для:", stock.name);
         
-        currentStock = stock;
+        // Показываем индикатор загрузки
+        stockName.textContent = stock.name;
+        stockTickerEl.textContent = stock.ticker;
+        currentPriceValue.innerHTML = '<span class="loader"></span>';
+        fairPriceEl.innerHTML = '<span class="loader"></span>';
+        growthPotentialEl.innerHTML = '<span class="loader"></span>';
+        dailyChangeEl.innerHTML = '<span class="loader"></span>';
+        tradeVolumeEl.innerHTML = '<span class="loader"></span>';
+        marketCapEl.innerHTML = '<span class="loader"></span>';
+        
+        // Переключаем экраны
         mainScreen.classList.add('hidden');
         detailScreen.classList.remove('hidden');
         backButton.classList.remove('hidden');
         appTitle.textContent = stock.name;
         
-        stockName.textContent = stock.name;
-        stockTickerEl.textContent = stock.ticker;
-        
-        // Обновляем цену в реальном времени
-        if (stock.currentPrice) {
-            currentPriceValue.textContent = stock.currentPrice.toFixed(2) + ' RUB';
-            
-            // Рассчитываем изменение цены
-            if (stock.initialPrice) {
-                const priceChangeValue = stock.currentPrice - stock.initialPrice;
-                const priceChangePercent = ((priceChangeValue / stock.initialPrice) * 100).toFixed(2);
-                
-                priceChange.textContent = `${priceChangeValue >= 0 ? '+' : ''}${priceChangeValue.toFixed(2)} (${priceChangePercent}%)`;
-                priceChange.className = priceChangeValue >= 0 ? 'positive' : 'negative';
-            }
+        // Загружаем данные, если их нет
+        if (!stock.currentData) {
+            stock.currentData = await fetchStockData(stock.ticker);
         }
         
-        // Справедливая цена и потенциал роста
+        // Обновляем данные
+        if (stock.currentData) {
+            updateStockDetail(stock);
+        } else {
+            // Обработка ошибки
+            currentPriceValue.textContent = "Ошибка";
+            fairPriceEl.textContent = stock.fairPrice.toFixed(2) + ' RUB';
+            growthPotentialEl.textContent = "Н/Д";
+        }
+    }
+    
+    // Обновление детальной информации об акции
+    function updateStockDetail(stock) {
+        const data = stock.currentData;
+        
+        // Текущая цена
+        currentPriceValue.textContent = data.currentPrice.toFixed(2) + ' RUB';
+        
+        // Справедливая цена
         fairPriceEl.textContent = stock.fairPrice.toFixed(2) + ' RUB';
         
-        if (stock.currentPrice) {
-            const growth = ((stock.fairPrice - stock.currentPrice) / stock.currentPrice * 100).toFixed(2);
-            growthPotentialEl.textContent = (growth > 0 ? '+' : '') + growth + '%';
-            growthPotentialEl.className = growth >= 0 ? 'positive' : 'negative';
+        // Потенциал роста
+        const growth = ((stock.fairPrice - data.currentPrice) / data.currentPrice * 100).toFixed(2);
+        const growthText = (growth > 0 ? '+' : '') + growth + '%';
+        growthPotentialEl.textContent = growthText;
+        growthPotentialEl.className = growth >= 0 ? 'positive' : 'negative';
+        
+        // Дополнительная информация
+        dailyChangeEl.textContent = data.change > 0 ? '+' + data.change.toFixed(2) + '%' : data.change.toFixed(2) + '%';
+        dailyChangeEl.className = data.change >= 0 ? 'positive' : 'negative';
+        
+        // Форматирование объема торгов
+        const volume = data.tradeVolume;
+        let volumeText;
+        if (volume >= 1000000000) {
+            volumeText = (volume / 1000000000).toFixed(1) + ' млрд RUB';
+        } else if (volume >= 1000000) {
+            volumeText = (volume / 1000000).toFixed(1) + ' млн RUB';
+        } else {
+            volumeText = volume.toFixed(0) + ' RUB';
         }
+        tradeVolumeEl.textContent = volumeText;
         
-        // Инициализация графика TradingView
-        initTradingViewChart();
-    }
-    
-    // Инициализация графика TradingView
-    function initTradingViewChart() {
-        const container = document.getElementById('tradingview-chart');
-        container.innerHTML = ''; // Очищаем предыдущий график
-        
-        if (!currentStock) return;
-        
-        // Создаем виджет TradingView
-        new TradingView.widget({
-            "autosize": true,
-            "symbol": `MOEX:${currentStock.ticker}`,
-            "interval": currentTimeFrame === '1D' ? 'D' : 
-                        currentTimeFrame === '1W' ? 'W' : 
-                        currentTimeFrame === '1M' ? 'M' : '3M',
-            "timezone": "Europe/Moscow",
-            "theme": "light",
-            "style": "1",
-            "locale": "ru",
-            "toolbar_bg": "#f1f3f6",
-            "enable_publishing": false,
-            "hide_top_toolbar": true,
-            "hide_legend": true,
-            "save_image": false,
-            "container_id": "tradingview-chart",
-            "studies": ["RSI@tv-basicstudies"],
-            "overrides": {
-                "paneProperties.background": "#ffffff",
-                "paneProperties.vertGridProperties.color": "#f0f0f0",
-                "paneProperties.horzGridProperties.color": "#f0f0f0",
-                "symbolWatermarkProperties.transparency": 90,
-                "scalesProperties.textColor" : "#aaa",
-                "mainSeriesProperties.candleStyle.upColor": '#4CAF50',
-                "mainSeriesProperties.candleStyle.downColor": '#F44336',
-                "mainSeriesProperties.candleStyle.borderUpColor": '#4CAF50',
-                "mainSeriesProperties.candleStyle.borderDownColor": '#F44336',
-                "mainSeriesProperties.candleStyle.wickUpColor": '#4CAF50',
-                "mainSeriesProperties.candleStyle.wickDownColor": '#F44336'
-            },
-            "studies_overrides": {
-                "rsi.display": "line",
-                "rsi.linecolor": "#2575fc"
-            }
-        });
-    }
-    
-    // Инициализация кнопок временных диапазонов
-    function initTimeFrameButtons() {
-        const buttons = document.querySelectorAll('.time-frame');
-        buttons.forEach(button => {
-            button.addEventListener('click', function() {
-                // Удаляем активный класс у всех кнопок
-                buttons.forEach(btn => btn.classList.remove('active'));
-                
-                // Добавляем активный класс текущей кнопке
-                this.classList.add('active');
-                
-                // Обновляем текущий временной диапазон
-                currentTimeFrame = this.getAttribute('data-time');
-                
-                // Перезагружаем график
-                if (currentStock) {
-                    initTradingViewChart();
-                }
-            });
-        });
+        // Форматирование капитализации
+        const marketCap = data.marketCap;
+        let capText;
+        if (marketCap >= 1000000000) {
+            capText = (marketCap / 1000000000).toFixed(1) + ' млрд RUB';
+        } else if (marketCap >= 1000000) {
+            capText = (marketCap / 1000000).toFixed(1) + ' млн RUB';
+        } else {
+            capText = marketCap.toFixed(0) + ' RUB';
+        }
+        marketCapEl.textContent = capText;
     }
     
     // Обработчик для строки поиска
@@ -291,8 +264,10 @@ try {
         appTitle.textContent = "Акции";
     });
     
-    // Инициализация временных диапазонов
-    initTimeFrameButtons();
+    // Обработчик для вкладки "Статьи"
+    document.querySelector('[data-tab="articles"]').addEventListener('click', function() {
+        alert("Раздел статей в разработке. Скоро здесь появятся полезные материалы!");
+    });
     
     // Показываем splash screen 2 секунды, затем основное приложение
     setTimeout(() => {

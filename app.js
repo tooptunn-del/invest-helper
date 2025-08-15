@@ -1,8 +1,3 @@
-// Отладка кликов по акциям
-document.getElementById('stocks-list').addEventListener('click', function(e) {
-    console.log("Click detected in stocks list", e.target);
-});
-
 // Данные акций
 const stocks = [
     {
@@ -49,6 +44,7 @@ const stocks = [
 
 // Инициализация Telegram Web App
 const tg = window.Telegram.WebApp;
+tg.expand(); // Раскрываем приложение сразу
 
 // Основные элементы DOM
 const splashScreen = document.getElementById('splash-screen');
@@ -74,70 +70,90 @@ let currentPrices = {};
 
 // Применяем тему Telegram
 function applyTheme() {
-    if (tg.colorScheme === 'dark') {
-        document.body.classList.add('dark-mode');
-    } else {
-        document.body.classList.remove('dark-mode');
-    }
+    document.body.classList.toggle('dark-mode', tg.colorScheme === 'dark');
 }
 
-// Показываем splash screen 2 секунды, затем основное приложение
-setTimeout(() => {
+// Инициализация приложения
+function initApp() {
+    console.log("Инициализация приложения");
+    
     splashScreen.classList.add('hidden');
     appContent.classList.remove('hidden');
-    tg.expand();
     applyTheme();
+    
     renderStocks();
-    updateStockPrices(); // Первоначальное обновление цен
-}, 2000);
+    updateStockPrices();
+    
+    // Активируем обработчики
+    setupEventListeners();
+}
 
-// Обработчики событий
-searchInput.addEventListener('input', function() {
-    const searchTerm = this.value.toLowerCase();
-    renderStocks(searchTerm);
-});
+// Настройка всех обработчиков событий
+function setupEventListeners() {
+    console.log("Настройка обработчиков событий");
+    
+    // Обработчик для строки поиска
+    searchInput.addEventListener('input', function() {
+        renderStocks(this.value.toLowerCase());
+    });
 
-backButton.addEventListener('click', function() {
+    // Обработчик для кнопки "Назад"
+    backButton.addEventListener('click', function() {
+        showMainScreen();
+    });
+
+    // Обработчики для вкладок
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            if (this.dataset.tab === 'articles') {
+                tg.showAlert("Раздел статей в разработке!");
+            }
+        });
+    });
+
+    // Обработчик для кнопки обновления данных
+    refreshDataButton.addEventListener('click', async function() {
+        tg.showProgress();
+        try {
+            const currentTicker = stockTicker.textContent;
+            delete dataCache[currentTicker];
+            
+            const newData = await fetchRealTimeData(currentTicker);
+            initTradingViewChart(newData);
+        } catch (error) {
+            console.error("Ошибка обновления:", error);
+        } finally {
+            tg.hideProgress();
+        }
+    });
+}
+
+// Показ главного экрана
+function showMainScreen() {
+    console.log("Переход на главный экран");
+    
     detailScreen.classList.add('hidden');
     mainScreen.classList.remove('hidden');
     backButton.classList.add('hidden');
     appTitle.textContent = "Акции";
-});
+}
 
-tabButtons.forEach(button => {
-    button.addEventListener('click', function() {
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        this.classList.add('active');
-        const tab = this.dataset.tab;
-        if (tab === 'articles') {
-            tg.showAlert("Раздел статей в разработке! Добавьте свои статьи позже.");
-        }
-    });
-});
-
-refreshDataButton.addEventListener('click', async function() {
-    const currentTicker = stockTicker.textContent;
-    delete dataCache[currentTicker];
+// Показ экрана деталей акции
+function showDetailScreen() {
+    console.log("Переход на экран деталей");
     
-    tg.showProgress();
-    try {
-        const newData = await fetchRealTimeData(currentTicker);
-        initTradingViewChart(newData);
-        
-        // Обновляем цену в заголовке
-        const newPrice = currentPrices[currentTicker] || stocks.find(s => s.ticker === currentTicker).currentPrice;
-        currentPriceValue.textContent = newPrice.toFixed(2) + ' RUB';
-        
-    } catch (error) {
-        console.error("Ошибка обновления:", error);
-        tg.showAlert("Не удалось обновить данные");
-    } finally {
-        tg.hideProgress();
-    }
-});
+    mainScreen.classList.add('hidden');
+    detailScreen.classList.remove('hidden');
+    backButton.classList.remove('hidden');
+}
 
 // Функция для отображения списка акций
 function renderStocks(filter = '') {
+    console.log("Рендерим список акций");
+    
     stocksList.innerHTML = '';
     
     const filteredStocks = filter ? stocks.filter(stock => 
@@ -148,7 +164,7 @@ function renderStocks(filter = '') {
     filteredStocks.forEach(stock => {
         const stockItem = document.createElement('div');
         stockItem.className = 'stock-item';
-        stockItem.setAttribute('data-ticker', stock.ticker);
+        stockItem.dataset.id = stock.id;
         
         const displayPrice = currentPrices[stock.ticker] || stock.currentPrice;
         
@@ -160,33 +176,26 @@ function renderStocks(filter = '') {
             <div class="stock-price">${displayPrice.toFixed(2)} RUB</div>
         `;
         
-        stockItem.addEventListener('click', async () => {
-            tg.showProgress();
-            try {
-                await showStockDetail(stock);
-            } catch (error) {
-                console.error("Ошибка загрузки деталей:", error);
-                tg.showAlert("Не удалось загрузить данные акции");
-            } finally {
-                tg.hideProgress();
-            }
+        stockItem.addEventListener('click', () => {
+            console.log("Выбрана акция:", stock.name);
+            loadStockDetail(stock);
         });
         
         stocksList.appendChild(stockItem);
     });
 }
 
-// Функция для показа деталей акции
-async function showStockDetail(stock) {
-    console.log("Opening details for:", stock.name);
+// Загрузка и отображение деталей акции
+function loadStockDetail(stock) {
+    console.log("Загрузка деталей для:", stock.name);
     
-    // Сначала показываем экран деталей
-    detailScreen.classList.remove('hidden');
-    mainScreen.classList.add('hidden');
-    backButton.classList.remove('hidden');
+    // Показываем экран деталей
+    showDetailScreen();
+    
+    // Обновляем заголовок
     appTitle.textContent = stock.name;
     
-    // Затем заполняем данные
+    // Заполняем данные
     stockName.textContent = stock.name;
     stockTicker.textContent = stock.ticker;
     
@@ -207,37 +216,39 @@ async function showStockDetail(stock) {
     growthPotentialEl.textContent = (growth > 0 ? '+' : '') + growth + '%';
     growthPotentialEl.className = growth >= 0 ? 'positive' : 'negative';
     
-    // Показываем заглушку графика на время загрузки
+    // Загружаем график
+    loadChartData(stock);
+}
+
+// Загрузка данных для графика
+async function loadChartData(stock) {
+    console.log("Загрузка данных для графика:", stock.ticker);
+    
     const chartContainer = document.getElementById('tradingview-chart');
     chartContainer.innerHTML = '<div class="chart-loading">Загрузка графика...</div>';
     
-    // Загружаем данные для графика (без блокировки интерфейса)
-    setTimeout(async () => {
-        try {
-            const realData = await fetchRealTimeData(stock.ticker);
-            initTradingViewChart(realData.length > 0 ? realData : convertToCandles(stock.history));
-        } catch (error) {
-            console.error("Ошибка загрузки данных:", error);
-            initTradingViewChart(convertToCandles(stock.history));
-        }
-    }, 0);
+    try {
+        const realData = await fetchRealTimeData(stock.ticker);
+        initTradingViewChart(realData.length > 0 ? realData : convertToCandles(stock.history));
+    } catch (error) {
+        console.error("Ошибка загрузки графика:", error);
+        chartContainer.innerHTML = '<div class="chart-error">Ошибка загрузки графика</div>';
+    }
 }
 
 // Функция для инициализации графика TradingView
 function initTradingViewChart(data) {
-    const chartContainer = document.getElementById('tradingview-chart');
+    console.log("Инициализация графика TradingView");
     
-    // Очищаем контейнер
+    const chartContainer = document.getElementById('tradingview-chart');
     chartContainer.innerHTML = '';
     
-    // Проверяем данные
     if (!data || data.length === 0) {
         chartContainer.innerHTML = '<div class="no-data">Нет данных для графика</div>';
         return;
     }
     
     try {
-        // Создаем график
         const chart = LightweightCharts.createChart(chartContainer, {
             width: chartContainer.clientWidth,
             height: 300,
@@ -248,110 +259,54 @@ function initTradingViewChart(data) {
             grid: {
                 vertLines: { visible: false },
                 horzLines: { color: tg.colorScheme === 'dark' ? '#333' : '#eee' },
-            },
-            timeScale: {
-                timeVisible: true,
-                secondsVisible: false,
-            },
+            }
         });
         
-        // Добавляем свечной ряд
-        const series = chart.addCandlestickSeries({
-            upColor: '#26a69a',
-            downColor: '#ef5350',
-            borderVisible: false,
-            wickUpColor: '#26a69a',
-            wickDownColor: '#ef5350',
+        const series = chart.addLineSeries({
+            color: '#2575fc',
+            lineWidth: 2,
         });
         
-        // Устанавливаем данные
-        series.setData(data);
-        
-        // Адаптация под изменение темы
-        tg.onEvent('themeChanged', applyTheme);
+        series.setData(data.map((d, i) => ({ 
+            time: i, 
+            value: d.close 
+        })));
         
     } catch (error) {
         console.error("Ошибка создания графика:", error);
-        chartContainer.innerHTML = `
-            <div class="chart-error">
-                Ошибка загрузки графика: ${error.message}
-                <button onclick="location.reload()">Обновить</button>
-            </div>
-        `;
+        chartContainer.innerHTML = '<div class="chart-error">Ошибка создания графика</div>';
     }
 }
 
-// Альтернативный источник данных (Yahoo Finance через RapidAPI)
+// Функция для получения реальных данных
 async function fetchRealTimeData(ticker) {
-    // Проверка кэша
-    if (dataCache[ticker] && (Date.now() - dataCache[ticker].timestamp < 300000)) {
-        return dataCache[ticker].data;
-    }
-
-    try {
-        // Вариант 1: MOEX API (основной)
-        const moexResponse = await fetch(`https://iss.moex.com/iss/engines/stock/markets/shares/securities/${ticker}.json?iss.meta=off&iss.only=securities&securities.columns=PREVPRICE`);
-        const moexData = await moexResponse.json();
-        
-        if (moexData.securities.data.length > 0) {
-            const price = moexData.securities.data[0][0];
-            currentPrices[ticker] = price;
+    console.log("Запрос данных для:", ticker);
+    
+    // Для простоты вернем тестовые данные
+    return new Promise(resolve => {
+        setTimeout(() => {
+            const data = [];
+            const basePrice = stocks.find(s => s.ticker === ticker)?.currentPrice || 100;
             
-            // Формируем демо-график на основе цены
-            const candles = [];
-            const now = Date.now() / 1000;
-            
-            for (let i = 10; i > 0; i--) {
-                const variation = (Math.random() - 0.5) * price * 0.05;
-                candles.push({
-                    time: now - i * 3600,
-                    open: price + variation * 0.8,
-                    high: price + variation * 1.2,
-                    low: price + variation * 0.5,
-                    close: price + variation
+            for (let i = 0; i < 20; i++) {
+                data.push({
+                    time: i,
+                    open: basePrice + i * 5 - 10,
+                    high: basePrice + i * 5 + 5,
+                    low: basePrice + i * 5 - 15,
+                    close: basePrice + i * 5
                 });
             }
             
-            // Сохраняем в кэш
-            dataCache[ticker] = {
-                data: candles,
-                timestamp: Date.now()
-            };
-            
-            return candles;
-        }
-
-        // Вариант 2: Альтернативный источник (если MOEX не ответил)
-        const alternativeResponse = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}.ME?interval=1d&range=5d`);
-        const altData = await alternativeResponse.json();
-        
-        const candles = altData.chart.result[0].indicators.quote[0].open.map((open, i) => ({
-            time: altData.chart.result[0].timestamp[i],
-            open: open,
-            high: altData.chart.result[0].indicators.quote[0].high[i],
-            low: altData.chart.result[0].indicators.quote[0].low[i],
-            close: altData.chart.result[0].indicators.quote[0].close[i]
-        }));
-        
-        // Сохраняем в кэш
-        dataCache[ticker] = {
-            data: candles,
-            timestamp: Date.now()
-        };
-        
-        return candles;
-        
-    } catch (error) {
-        console.error('Ошибка загрузки данных:', error);
-        tg.showAlert("Ошибка загрузки данных. Используем демо-график");
-        return [];
-    }
+            resolve(data);
+        }, 300);
+    });
 }
 
 // Конвертер для тестовых данных
 function convertToCandles(prices) {
     return prices.map((price, i) => ({
-        time: (Date.now() / 1000) - (prices.length - i) * 3600,
+        time: i,
         open: price - 10,
         high: price + 5,
         low: price - 15,
@@ -361,29 +316,15 @@ function convertToCandles(prices) {
 
 // Функция для обновления цен акций
 async function updateStockPrices() {
-    for (const stock of stocks) {
-        try {
-            // Прямой запрос к MOEX API (без CORS-прокси)
-            const response = await fetch(`https://iss.moex.com/iss/engines/stock/markets/shares/securities/${stock.ticker}.json?iss.meta=off&iss.only=securities&securities.columns=PREVPRICE`);
-            const data = await response.json();
-            
-            if (data.securities.data.length > 0) {
-                const lastPrice = data.securities.data[0][0];
-                currentPrices[stock.ticker] = lastPrice;
-                
-                const priceElement = document.querySelector(`.stock-item[data-ticker="${stock.ticker}"] .stock-price`);
-                if (priceElement) {
-                    priceElement.textContent = `${lastPrice.toFixed(2)} RUB`;
-                    priceElement.classList.add('price-update-animation');
-                    setTimeout(() => priceElement.classList.remove('price-update-animation'), 1000);
-                }
-            }
-        } catch (error) {
-            console.error(`Ошибка обновления ${stock.ticker}:`, error);
-            // Используем статичную цену как запасной вариант
-            currentPrices[stock.ticker] = stock.currentPrice;
-        }
-    }
+    console.log("Обновление цен акций");
+    
+    // Для теста - обновляем цены случайным образом
+    stocks.forEach(stock => {
+        const change = (Math.random() - 0.5) * stock.currentPrice * 0.1;
+        currentPrices[stock.ticker] = stock.currentPrice + change;
+    });
+    
+    renderStocks(searchInput.value.toLowerCase());
 }
 
 // Глобальный обработчик ошибок
@@ -392,5 +333,6 @@ window.addEventListener('error', function(event) {
     tg.showAlert(`Произошла ошибка: ${event.message}`);
 });
 
-// Говорим Telegram, что приложение готово
+// Запуск приложения
+setTimeout(initApp, 2000);
 tg.ready();

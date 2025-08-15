@@ -64,6 +64,8 @@ body.dark-mode {
     padding: 15px;
     background-color: #fff;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+    z-index: 100;
 }
 
 body.dark-mode #app-header {
@@ -78,16 +80,20 @@ body.dark-mode #app-header {
     margin-right: 10px;
     cursor: pointer;
     color: #2575fc;
+    z-index: 101;
 }
 
 #app-title {
     margin: 0;
     font-size: 1.3rem;
+    z-index: 101;
 }
 
 /* Поисковая строка */
 .search-container {
     padding: 15px;
+    position: relative;
+    z-index: 90;
 }
 
 #search-input {
@@ -112,6 +118,8 @@ body.dark-mode #search-input {
     padding: 0 15px;
     height: calc(100vh - 180px);
     overflow-y: auto;
+    position: relative;
+    z-index: 80;
 }
 
 .stock-item {
@@ -170,6 +178,8 @@ body.dark-mode .stock-ticker {
     padding: 15px;
     height: calc(100vh - 120px);
     overflow-y: auto;
+    position: relative;
+    z-index: 90;
 }
 
 .stock-header {
@@ -188,6 +198,7 @@ body.dark-mode .stock-ticker {
     font-size: 0.9rem;
     cursor: pointer;
     transition: background 0.3s;
+    z-index: 95;
 }
 
 #refresh-data:hover {
@@ -216,6 +227,8 @@ body.dark-mode .stock-ticker {
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    position: relative;
+    z-index: 85;
 }
 
 body.dark-mode .chart-container {
@@ -229,6 +242,7 @@ body.dark-mode .chart-container {
     padding: 15px;
     margin-top: 20px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    z-index: 85;
 }
 
 body.dark-mode .info-box {
@@ -268,6 +282,7 @@ body.dark-mode .info-row {
     right: 0;
     background: white;
     box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    z-index: 100;
 }
 
 body.dark-mode .tabs {
@@ -283,6 +298,7 @@ body.dark-mode .tabs {
     font-size: 16px;
     cursor: pointer;
     color: #666;
+    z-index: 101;
 }
 
 body.dark-mode .tab-button {
@@ -314,31 +330,7 @@ body.dark-mode .tab-button {
     height: 100%;
     color: #888;
     font-style: italic;
-}
-
-.chart-error {
-    background-color: #ffebee;
-    border: 1px solid #e57373;
-    border-radius: 8px;
-    padding: 10px;
-    text-align: center;
-    margin: 10px 0;
-}
-
-body.dark-mode .chart-error {
-    background-color: #3a2528;
-    border: 1px solid #7b4747;
-}
-/* Дополнительные стили для сообщений об ошибках */
-.no-data {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    color: #888;
-    font-style: italic;
     padding: 20px;
-    text-align: center;
 }
 
 .chart-error {
@@ -350,22 +342,6 @@ body.dark-mode .chart-error {
     margin: 10px 0;
 }
 
-.chart-error button {
-    background: #2575fc;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 4px;
-    margin-top: 10px;
-    cursor: pointer;
-}
-
-body.dark-mode .chart-error {
-    background-color: #3a2528;
-    border: 1px solid #7b4747;
-}
-
-/* Стиль для сообщения о загрузке графика */
 .chart-loading {
     display: flex;
     justify-content: center;
@@ -375,42 +351,40 @@ body.dark-mode .chart-error {
     font-style: italic;
 }
 
-/* Гарантия, что экран деталей будет видим */
-#detail-screen {
-    display: block !important;
-    opacity: 1;
-    transition: opacity 0.3s;
+body.dark-mode .chart-error {
+    background-color: #3a2528;
+    border: 1px solid #7b4747;
 }
 
-#detail-screen.hidden {
-    display: none !important;
-    opacity: 0;
-}
-
-/* Фикс для перекрытия элементов */
-#app-content {
-    position: relative;
-    height: 100vh;
-    overflow: hidden;
-}
-
-#main-screen,
-#detail-screen {
+/* Гарантия правильного отображения экранов */
+#main-screen, #detail-screen {
     position: absolute;
-    top: 0;
+    top: 60px;
     left: 0;
     right: 0;
-    bottom: 50px; /* Учитываем высоту табов */
-    overflow-y: auto;
-    transition: transform 0.3s, opacity 0.3s;
+    bottom: 50px;
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+#main-screen {
+    opacity: 1;
+    transform: translateX(0);
 }
 
 #main-screen.hidden {
-    transform: translateX(-100%);
     opacity: 0;
+    transform: translateX(-100%);
+    pointer-events: none;
 }
 
-#detail-screen.hidden {
-    transform: translateX(100%);
+#detail-screen {
     opacity: 0;
+    transform: translateX(100%);
+    pointer-events: none;
+}
+
+#detail-screen:not(.hidden) {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
 }

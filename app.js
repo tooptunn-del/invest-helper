@@ -173,14 +173,15 @@ function renderStocks(filter = '') {
 
 // Функция для показа деталей акции
 async function showStockDetail(stock) {
-    console.log("Отображаем акцию:", stock);
+    console.log("Opening details for:", stock.name);
     
-    mainScreen.classList.add('hidden');
+    // Сначала показываем экран деталей
     detailScreen.classList.remove('hidden');
+    mainScreen.classList.add('hidden');
     backButton.classList.remove('hidden');
     appTitle.textContent = stock.name;
     
-    // Заполняем данные
+    // Затем заполняем данные
     stockName.textContent = stock.name;
     stockTicker.textContent = stock.ticker;
     
@@ -201,15 +202,20 @@ async function showStockDetail(stock) {
     growthPotentialEl.textContent = (growth > 0 ? '+' : '') + growth + '%';
     growthPotentialEl.className = growth >= 0 ? 'positive' : 'negative';
     
-    // Загружаем данные для графика
-    try {
-        const realData = await fetchRealTimeData(stock.ticker);
-        initTradingViewChart(realData.length > 0 ? realData : convertToCandles(stock.history));
-    } catch (error) {
-        console.error("Ошибка загрузки данных:", error);
-        initTradingViewChart(convertToCandles(stock.history));
-        tg.showAlert("Используем демо-данные для графика");
-    }
+    // Показываем заглушку графика на время загрузки
+    const chartContainer = document.getElementById('tradingview-chart');
+    chartContainer.innerHTML = '<div class="chart-loading">Загрузка графика...</div>';
+    
+    // Загружаем данные для графика (без блокировки интерфейса)
+    setTimeout(async () => {
+        try {
+            const realData = await fetchRealTimeData(stock.ticker);
+            initTradingViewChart(realData.length > 0 ? realData : convertToCandles(stock.history));
+        } catch (error) {
+            console.error("Ошибка загрузки данных:", error);
+            initTradingViewChart(convertToCandles(stock.history));
+        }
+    }, 0);
 }
 
 // Функция для инициализации графика TradingView

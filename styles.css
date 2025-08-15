@@ -364,3 +364,53 @@ body.dark-mode .chart-error {
     background-color: #3a2528;
     border: 1px solid #7b4747;
 }
+
+/* Стиль для сообщения о загрузке графика */
+.chart-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #2575fc;
+    font-style: italic;
+}
+
+/* Гарантия, что экран деталей будет видим */
+#detail-screen {
+    display: block !important;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
+#detail-screen.hidden {
+    display: none !important;
+    opacity: 0;
+}
+
+/* Фикс для перекрытия элементов */
+#app-content {
+    position: relative;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#main-screen,
+#detail-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 50px; /* Учитываем высоту табов */
+    overflow-y: auto;
+    transition: transform 0.3s, opacity 0.3s;
+}
+
+#main-screen.hidden {
+    transform: translateX(-100%);
+    opacity: 0;
+}
+
+#detail-screen.hidden {
+    transform: translateX(100%);
+    opacity: 0;
+}

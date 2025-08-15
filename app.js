@@ -14,7 +14,7 @@ const stocks = [
     },
     {
         id: 3,
-        ticker: "YNDX",
+        ticker: "YDEX",
         name: "Яндекс",
         fairPrice: 4200.00
     },

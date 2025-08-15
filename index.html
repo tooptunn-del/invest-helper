@@ -6,7 +6,7 @@
     <title>Помощник инвестора</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <!-- Экран загрузки -->
@@ -17,7 +17,7 @@
         </div>
     </div>
     
-    <!-- Основное приложение (скрыто сначала) -->
+    <!-- Основное приложение -->
     <div id="app-content" class="hidden">
         <!-- Шапка приложения -->
         <header id="app-header">
@@ -25,57 +25,40 @@
             <h1 id="app-title">Акции</h1>
         </header>
         
-        <!-- Главный экран со списком акций -->
+        <!-- Главный экран -->
         <div id="main-screen">
             <div class="search-container">
                 <input type="text" id="search-input" placeholder="Поиск акций...">
             </div>
-            
-            <div id="stocks-list">
-                <!-- Список акций будет загружен здесь -->
+            <div id="stocks-list"></div>
+        </div>
+        
+        <!-- Экран деталей -->
+        <div id="detail-screen" class="hidden">
+            <div class="stock-header">
+                <h2 id="stock-name"></h2>
+                <div class="stock-ticker" id="stock-ticker"></div>
+            </div>
+            <div class="current-price">
+                <span id="current-price-value"></span>
+                <span id="price-change"></span>
+            </div>
+            <div class="chart-container">
+                <canvas id="simple-chart"></canvas>
+            </div>
+            <div class="info-box">
+                <div class="info-row">
+                    <span>Справедливая цена:</span>
+                    <span id="fair-price"></span>
+                </div>
+                <div class="info-row">
+                    <span>Потенциал роста:</span>
+                    <span id="growth-potential"></span>
+                </div>
             </div>
         </div>
         
-        <!-- Экран деталей акции -->
-    <div id="detail-screen" class="hidden">
-        <div class="stock-header">
-            <h2 id="stock-name"></h2>
-            <div class="stock-ticker" id="stock-ticker"></div>
-            <button id="refresh-data">⟳ Обновить</button>
-        </div>
-        
-        <div class="current-price">
-            <span id="current-price-value"></span>
-            <span id="price-change"></span>
-        </div>
-        
-        <!-- Добавляем панель управления графиком -->
-        <div class="chart-controls">
-            <button class="timeframe-btn active" data-timeframe="1D">1Д</button>
-            <button class="timeframe-btn" data-timeframe="1W">1Н</button>
-            <button class="timeframe-btn" data-timeframe="1M">1М</button>
-            <button class="timeframe-btn" data-timeframe="3M">3М</button>
-            <button class="timeframe-btn" data-timeframe="1Y">1Г</button>
-            <button class="timeframe-btn" data-timeframe="ALL">Всё</button>
-        </div>
-        
-        <div class="chart-container">
-            <div id="tradingview-chart"></div>
-        </div>
-        
-        <div class="info-box">
-            <div class="info-row">
-                <span>Справедливая цена:</span>
-                <span id="fair-price"></span>
-            </div>
-            <div class="info-row">
-                <span>Потенциал роста:</span>
-                <span id="growth-potential"></span>
-            </div>
-        </div>
-    </div>
-        
-        <!-- Вкладки внизу экрана -->
+        <!-- Вкладки -->
         <div class="tabs">
             <button class="tab-button active" data-tab="stocks">Акции</button>
             <button class="tab-button" data-tab="articles">Статьи</button>
